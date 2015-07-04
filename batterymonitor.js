@@ -53,13 +53,12 @@
     },
     initialize: function(){
       var this$ = this;
-      this.env = {};
-      this.env.full = Number(fs.readFileSync('/sys/class/power_supply/BAT0/energy_full'));
-      this.env.perc = this.env.full / 100.0;
+      this.full = Number(fs.readFileSync('/sys/class/power_supply/BAT0/energy_full'));
+      this.perc = this.full / 100.0;
       this.update();
       setInterval(function(){
         return this$.update();
-      }, 1000);
+      }, 3000);
       return this.on('change:battery', function(model, battery){
         console.log(battery);
         return this$.state.checkMove(battery);
@@ -68,7 +67,7 @@
     update: function(){
       return this.set({
         battery: {
-          charge: Math.floor(Number(fs.readFileSync("/sys/class/power_supply/" + this.bat + "/energy_now")) / this.env.perc),
+          charge: Math.floor(Number(fs.readFileSync("/sys/class/power_supply/" + this.bat + "/energy_now")) / this.perc),
           state: h.trim(String(fs.readFileSync("/sys/class/power_supply/" + this.bat + "/status"))).toLowerCase()
         }
       });

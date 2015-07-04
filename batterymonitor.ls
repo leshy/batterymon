@@ -46,19 +46,20 @@ BatAlerter = abstractMan.StateMachine.extend4000(
     battery: { state: 'unknown' } }
     
   initialize: ->
-    @env = {}
-    @env.full = Number fs.readFileSync '/sys/class/power_supply/BAT0/energy_full'
-    @env.perc = @env.full / 100.0
+    @full = Number fs.readFileSync '/sys/class/power_supply/BAT0/energy_full'
+    @perc = @full / 100.0
 
     @update()
-    setInterval (~> @update()), 1000
+    
+    setInterval (~> @update()), 3000
+    
     @on 'change:battery', (model,battery) ~>
       console.log battery
       @state.checkMove(battery)
     
   update: ->
     @set { battery: {
-      charge: Math.floor(Number(fs.readFileSync "/sys/class/power_supply/#{@bat}/energy_now") / @env.perc)
+      charge: Math.floor(Number(fs.readFileSync "/sys/class/power_supply/#{@bat}/energy_now") / @perc)
       state: (h.trim String fs.readFileSync "/sys/class/power_supply/#{@bat}/status").toLowerCase()
     }}
     
