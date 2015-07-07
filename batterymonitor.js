@@ -11,9 +11,10 @@
   batState = abstractMan.State.extend4000({
     initialize: function(){
       var this$ = this;
-      this.checkMove();
       this.on('visit', function(){
-        return this$.checkMove();
+        if (!this$.checkMove()) {
+          return this$.trigger('settle');
+        }
       });
       return this.on('settle', function(){
         console.log(colors.green("settled on " + this$.name));
@@ -36,9 +37,7 @@
       if (child) {
         this.changeState(child);
         return true;
-      } else {
-        this.trigger('settle');
-      }
+      } else {}
     }
   });
   BatAlerter = abstractMan.StateMachine.extend4000({
@@ -55,17 +54,16 @@
       var this$ = this;
       this.full = Number(fs.readFileSync('/sys/class/power_supply/BAT0/energy_full'));
       this.perc = this.full / 100.0;
-      this.update();
       setInterval(function(){
         return this$.update();
-      }, 3000);
+      }, 1000);
       return this.on('change:battery', function(model, battery){
-        console.log(battery);
         return this$.state.checkMove(battery);
       });
     },
     update: function(){
-      return this.set({
+      var data;
+      return this.set(data = {
         battery: {
           charge: Math.floor(Number(fs.readFileSync("/sys/class/power_supply/" + this.bat + "/energy_now")) / this.perc),
           state: h.trim(String(fs.readFileSync("/sys/class/power_supply/" + this.bat + "/status"))).toLowerCase()
@@ -73,7 +71,8 @@
       });
     }
   });
-  state_charging = BatAlerter.defineState('charging', {
+  state_charging = BatAlerter.defineState({
+    name: 'charging',
     child: 'unknown',
     check: function(state){
       return state.state === 'charging';
@@ -82,13 +81,15 @@
       return notify("Battery is charging");
     }
   });
-  state_charged = state_charging.defineChild('charged', {
+  state_charged = state_charging.defineChild({
+    name: 'charged',
     children: ['discharging', 'unknown'],
     check: function(state){
       return state.state === 'unknown' && state.charge >= 75;
     }
   });
-  state_discharging = state_charging.defineChild('discharging', {
+  state_discharging = state_charging.defineChild({
+    name: 'discharging',
     children: ['charging', 'unknown'],
     check: function(state){
       return state.state === 'discharging';
@@ -97,7 +98,8 @@
       return notify("Battery is discharging");
     }
   });
-  state_unknown = BatAlerter.defineState('unknown', {
+  state_unknown = BatAlerter.defineState({
+    name: 'unknown',
     children: ['charging', 'charged', 'discharging'],
     check: function(state){
       return state.state === 'unknown';
@@ -112,6 +114,7 @@
   numberState = function(n, options){
     var state;
     return state = {
+      name: String(n),
       children: ['charging', 'unknown'],
       check: function(state){
         return state.charge <= n;
@@ -130,26 +133,26 @@
       }
     };
   };
-  state_75 = state_discharging.defineChild('75', numberState(75, {
+  state_75 = state_discharging.defineChild(numberState(75, {
     notify: true
   }));
-  state_50 = state_75.defineChild('50', numberState(50, {
+  state_50 = state_75.defineChild(numberState(50, {
     notify: true,
     blink: true
   }));
-  state_30 = state_50.defineChild('30', numberState(30, {
+  state_30 = state_50.defineChild(numberState(30, {
     notify: true,
     blink: true
   }));
-  state_20 = state_30.defineChild('20', numberState(20, {
+  state_20 = state_30.defineChild(numberState(20, {
     notify: true,
     blink: true
   }));
-  state_10 = state_20.defineChild('10', numberState(10, {
+  state_10 = state_20.defineChild(numberState(10, {
     notify: true,
     blink: true
   }));
-  state_5 = state_10.defineChild('5', numberState(5, {
+  state_5 = state_10.defineChild(numberState(5, {
     notify: true,
     blink: true
   }));
